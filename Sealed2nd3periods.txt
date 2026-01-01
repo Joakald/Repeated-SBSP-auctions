@@ -1,0 +1,96 @@
+
+This is the Python code for my paper
+
+REPEATED SEALED-BID SECOND-PRICE AUCTION WITH INCONSISTENT 
+AND ASYMMETRIC TIME PREFERENCES
+
+-----------------------------------------------------------
+
+ABOUT THE MODEL
+Three periods.
+Future benefits are discounted by quasi-hyperbolic (beta,delta) discount functions.
+Initial budgets, values and time preferecens are randomly drawn.
+All players are identical in terms of the distributions of their parameters.
+Sophisticated, commitment and naive solutions are calculated.
+It is assumed for reasons of tractability that players who lose don't observe the transfer.
+
+-----------------------------------------------------------
+
+MAIN ITERATION LOGIC
+
+Period 3:
+1. find b3^*(B3,V3) for every (B3,V3) in grid
+2. find distribution of m3 given B3 sample and V3 sample
+3. find Eflow3(B3,V3) using b3^*(B3,V3) for every (B3,V3) in grid given distribution of m3
+
+Period 2:
+1. find b2^*(B2,V2,V3,delta,beta) for every (B2,V2,V3,delta,beta) in grid
+   given Eflow3(B3,V3) by using foc2
+2. find distribution of m2 given samples of B2,V2,V3,delta,beta
+3. find Eflow2(B2,V2,V3,delta,beta) and Eflow3from2(B2,V2,V3,delta,beta)
+   by using b2^*(B2,V2,V3,delta,beta) for every (B2,V2,V3,delta,beta) in grid
+   given distribution of m2
+
+Period 1:
+1. find b1^*(B1,V1,V2,V3,delta,beta) for every player in sample (not grid)
+   given Eflow2 and Eflow3from2 by using foc1
+
+Forward simulation:
+1. find new B2 sample and B2 for rivals in each history given b1^*
+2. find b2^*(B2,V2,V3,beta,delta) given the draws of (V2,V3,beta,delta) and new B2 sample
+3. find new B3 sample and B3 for rival in each history given b2^*
+5. Check KS distance between old and new rival sample for B2 and B3 in each history
+6. Update B2 and B3 rival samples and break if KS distances are sufficiently small
+
+-----------------------------------------------------
+
+NOTES
+
+***keep the same draw of (B1,V1,V2,V3,delta,beta} during the whole process,
+only B2 rivals and B3 rivals are updated in each loop
+
+***In foc2, utility from period 3 is discounted by beta*delta if the solution is sophisticated
+or naive and by delta if the solution is commitment. In foc1, future utility from period 2
+is always discounted by beta*delta and utility from period 3 is always discounted by
+beta*delta^2. In the naive solution, the CV for foc1 are calculated on the assumption that
+players in period will follow the behavior of the commitment agent, when in fact they follow
+the behavior of the sophisticated agent
+
+-------------------------------------------------------------------
+
+SHAPE AND NAMING CONVENTIONS
+
+N_A : number of auctions
+N_P : number of players (per auction, including the focal player)
+N_R : number of rivals = N_P - 1
+N_H2: number of histories in period 2 (win, lose) = 2
+N_H3: number of histories in period 3 (win-win, win-lose, lose-win, lose-lose) = 4
+
+ Common arrays:
+   B*_sample:    shape (N_A, N_P)      budgets for all players per auction
+   B*_rival_*:   shape (N_A, N_R)      rival budgets per auction and history
+   V*_sample:    shape (N_A, N_P)      values for all players per auction
+   m2:           shape (N_A, N_H2)     highest rival bid per auction and t=2 history
+   m3:           shape (N_A, N_H3)     highest rival bid per auction and t=3 history
+   ties2, ties3: same shape as corresponding m* arrays
+
+B3 rival budgets by (H2, H2 outcome) histories:
+   winlose: won t=1, lost t=2
+   losewin: lost t=1, won t=2
+   loselose: lost both t=1, t=2
+
+RESULTS DICTIONARY (without b1 strategy, which is optional)
+
+ result = {
+   "b2_strategy":  b2_strategy_grid,            (H2, B2, V2, V3, beta, delta)
+   "b1_sample":    b1_sample,                   (N_A, N_P)
+   "b2_sample":    b2_sample,                   (N_A, N_P)
+   "b3_sample":    b3_sample,                   (N_A, N_P)
+   "B1_sample":    B1_sample,                   (N_A, N_P)
+   "B2_sample":    B2_sample,                   (N_A, N_P)
+   "B3_sample":    B3_sample,                   (N_A, N_P)
+   "B2_rival_dist_lose":     B2_rival_lose,     (N_A, N_R)
+   "B3_rival_dist_winlose":  B3_rival_winlose,  (N_A, N_R)
+   "B3_rival_dist_losewin":  B3_rival_losewin,  (N_A, N_R)
+   "B3_rival_dist_loselose": B3_rival_loselose, (N_A, N_R)
+ }
